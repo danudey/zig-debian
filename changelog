@@ -1,3 +1,26 @@
+zig0.17 (0.17.0~us1-1) unstable; urgency=medium
+
+  * Build from upstream source instead of repacking upstream's binaries,
+    following the layout of Ubuntu's zig0.16 packaging:
+    - Rename the source package to zig0.17, and split the binary package
+      into zig0.17 (compiler, /usr/bin/zig0.17) and zig0.17-dev (standard
+      library, docs).
+    - Build with CMake against the system LLVM/Clang/LLD 22.
+    - Replace the vendored Clang headers (lib/include) with a link to
+      libclang-common-22-dev; repack as ~us1 via Files-Excluded.
+    - Generate a man page with help2man; run the upstream behaviour tests
+      at build time and as autopkgtests.
+    - Import debian/copyright and debian/lrc.config from Ubuntu.
+  * debian/fetch-orig-source: download the upstream source tarball, verify
+    its SHA-256 and minisign signature, and repack it with mk-origtargz.
+  * debian/rules: fetch and unpack the upstream source automatically when
+    building from a checkout that contains only debian/.
+  * Add debian/update-upstream to move to the latest upstream release.
+  * Provide /usr/bin/zig and zig(1) through update-alternatives, so the
+    default can be chosen when several series are installed.
+
+ -- Daniel Fox <danudey@me.com>  Tue, 03 Nov 2026 09:26:32 -0700
+
 zig (0.17.0-1) unstable; urgency=medium
 
   * New upstream release, based on upstream's amd64 and arm64 binaries:

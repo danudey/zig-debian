@@ -1,4 +1,14 @@
 version=4
-opts="searchmode=plain" \
-  https://ziglang.org/download/index.json \
-  https://ziglang.org/download/[\d.]+/zig-x86_64-linux-@ANY_VERSION@@ARCHIVE_EXT@
+
+# example URIs:
+# https://ziglang.org/download/0.17.0/zig-0.17.0.tar.xz
+# https://ziglang.org/download/0.17.0/zig-0.17.0.tar.xz.minisig
+#
+# uscan cannot check minisign signatures. debian/fetch-orig-source
+# downloads the same tarball and verifies its signature; prefer it.
+# Use debian/update-upstream to move to a new 0.x series.
+
+opts="dversionmangle=s/~us\d*$//, \
+      repacksuffix=~us1, \
+      compression=xz" \
+      https://ziglang.org/download/ .*/zig-(0\.17\.[0-9.]*)\.tar\.xz

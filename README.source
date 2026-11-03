@@ -1,0 +1,55 @@
+The upstream tarball vendors in a number of tools and libraries.
+Generating the unvendored source file can be performed via:
+
+ debian/rules get-orig-source
+
+which runs debian/fetch-orig-source. It downloads the release named
+in debian/changelog, verifies its SHA-256 (from upstream's index.json)
+and its minisign signature (key in debian/upstream/signing-key), and
+repacks it with mk-origtargz, which gets its list of excluded files
+from debian/copyright. "uscan --repack -v" produces the same tarball
+but cannot check minisign signatures.
+
+When the package directory contains only debian/, every debian/rules
+target runs "debian/fetch-orig-source --unpack" first, so the
+packaging repository can be built directly.
+
+The vendored Clang headers (lib/include) are replaced by a link to
+the ones in libclang-common-N-dev. CMake directives eliminate the
+need for the remainder.
+
+debian/update-upstream moves the packaging to a new upstream release,
+renaming the packages when the 0.x series changes.
+
+There is a binary present even in the Debianized source:
+src/zig1.wasm. This is a precompiled WASM file implementing
+the zig bootstrap compiler. Its sources are present, and
+the zig binary we build can rebuild it, so it is believed
+that this comes under the compiler bootstrap exemption.
+
+
+More on upstream vendoring
+--------------------------
+
+The lib directory in the source tarball has vendored code:
+
+1. libunwind and libtsan from the LLVM project
+2. libcxx and libcxxabi from the LLVM project
+3. The libc directory contains libc implementations for 
+   various opeerating system / ABI targets. 
+
+These sources may be fully-vendored upstream sources, like
+libunwind and libtsan, that are compiled and statically linked
+into binaries produced by the Zig compiler. Alternatively, like in
+the glibc case, they could also be stubs that are statically linked
+into the binaries and represent a mapping of un-versioned public
+APIs to glibc-private versioned APIs. These vendored sources
+make cross-compiling of zig applications possible.
+
+See the below upstream link for details:
+https://github.com/ziglang/zig/tree/master/lib/libc/glibc
+
+These sources are updated by the upstream maintainers. Below is an
+example of one such commit:
+https://github.com/ziglang/zig/commit/2314051
+

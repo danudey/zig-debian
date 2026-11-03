@@ -1,12 +1,9 @@
-# This package repacks upstream's prebuilt binary release.
-zig source: source-is-missing [zig]
-zig source: source-is-missing [doc/langref.html]
-zig source: source-is-missing [lib/build-web/index.html]
-zig source: source-is-missing [lib/docs/index.html]
+zig0.17 source: source-contains-prebuilt-wasm-binary [stage1/zig1.wasm]
 
-# Vendored FreeBSD header quoting an RFC; shipped verbatim by upstream.
-zig source: license-problem-non-free-RFC [lib/libc/include/generic-freebsd/netlink/netlink.h]
+# File from under RFC-3549, but also multi-licensed under BSD-2-Clause.
+# See: https://lintian.debian.org/tags/license-problem-non-free-RFC.html
+zig0.17 source: license-problem-non-free-RFC [lib/libc/include/generic-freebsd/netlink/netlink.h]
 
 # Upstream signs releases with minisign, which uscan cannot check;
 # debian/fetch-orig-source verifies the signature instead.
-zig source: debian-watch-does-not-check-openpgp-signature [debian/watch]
+zig0.17 source: debian-watch-does-not-check-openpgp-signature [debian/watch]

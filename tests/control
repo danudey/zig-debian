@@ -1,0 +1,10 @@
+# ensure we can run the binary we just installed
+Test-Command: /usr/bin/zig0.17 --help
+Depends: zig0.17
+Restrictions: allow-stderr
+Features: test-name=zigexec
+
+Test-Command: /usr/bin/zig0.17 test test/behavior.zig
+Depends: zig0.17
+Restrictions: allow-stderr
+Features: test-name=upstream-tests

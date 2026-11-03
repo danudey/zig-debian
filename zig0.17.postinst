@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+# Register this series as a provider of /usr/bin/zig. Newer series get a
+# higher priority, so the newest installed one is the default unless the
+# administrator picks another with "update-alternatives --config zig".
+pkg=zig0.17
+series=${pkg#zig}
+priority=$(( ${series%%.*} * 100 + ${series#*.} ))
+
+if [ "$1" = configure ]; then
+	update-alternatives --install /usr/bin/zig zig /usr/lib/$pkg/bin/zig "$priority" \
+		--slave /usr/share/man/man1/zig.1.gz zig.1.gz /usr/share/man/man1/$pkg.1.gz
+fi
+
+#DEBHELPER#
+
+exit 0

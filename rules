@@ -1,56 +1,82 @@
 #!/usr/bin/make -f
-# Repackages upstream's prebuilt, statically linked Zig release.
-# Use debian/fetch-orig-source to create the orig tarball.
-
-export LC_ALL=C.UTF-8
 
 include /usr/share/dpkg/architecture.mk
 include /usr/share/dpkg/pkg-info.mk
 
-PKGDIR  = debian/zig
-ZIGDIR  = usr/lib/zig
+# zig0.17 -> 0.17
+VERSION := $(patsubst zig%,%,$(DEB_SOURCE))
+# 0.17.0~us1 -> 0.17.0
+UPSTREAM_VERSION := $(shell echo '$(DEB_VERSION_UPSTREAM)' | sed 's/~us[0-9]*$$//')
+# Must match the LLVM version in debian/control and debian/*.links;
+# debian/update-upstream keeps them in sync.
+LLVM_VERSION := 22
 
-# Expected ELF machine for each supported Debian architecture.
-ELF_MACHINE_amd64 = Advanced Micro Devices X86-64
-ELF_MACHINE_arm64 = AArch64
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+export ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/debian/zig-cache
+
+# A checkout of the packaging repository contains only debian/. In that
+# case, download, verify and unpack the upstream source for the version in
+# debian/changelog before running any dh sequence. This lets
+# "debian/rules build", "debuild" and "dpkg-buildpackage" (source or
+# binary) work from a bare checkout. Unpacked source packages are not
+# affected.
+ifeq ($(wildcard CMakeLists.txt),)
+clean build build-arch build-indep binary binary-arch binary-indep: fetch-upstream-source
+endif
+
+fetch-upstream-source:
+	debian/fetch-orig-source --unpack
+
+# Download and repack the orig tarball into the parent directory only.
+get-orig-source:
+	debian/fetch-orig-source
+
+.PHONY: fetch-upstream-source get-orig-source
 
 %:
-	dh $@
+	dh $@ --buildsystem=cmake
+
+# The upstream version from CMakeLists.txt, e.g. 0.17.0
+SOURCE_VERSION = $(shell sed -n 's/^set(ZIG_VERSION_\(MAJOR\|MINOR\|PATCH\) \([0-9]*\))$$/\2/p' CMakeLists.txt | paste -sd.)
 
 override_dh_auto_configure:
-	@test -n "$(ELF_MACHINE_$(DEB_HOST_ARCH))" || \
-	  { echo "unsupported architecture: $(DEB_HOST_ARCH)" >&2; exit 1; }
-	@readelf -h zig | grep -q "Machine: *$(ELF_MACHINE_$(DEB_HOST_ARCH))$$" || \
-	  { echo "the zig binary in the orig tarball is not for $(DEB_HOST_ARCH);" \
-	         "re-run debian/fetch-orig-source for this architecture" >&2; exit 1; }
+	@test "$(SOURCE_VERSION)" = "$(UPSTREAM_VERSION)" || { \
+	  echo "error: unpacked source is zig $(SOURCE_VERSION), but debian/changelog wants $(UPSTREAM_VERSION)." >&2; \
+	  echo "       Remove the old source (keep debian/) and run debian/rules build again." >&2; \
+	  exit 1; }
+	ln -sfn /usr/lib/llvm-$(LLVM_VERSION)/lib/clang/$(LLVM_VERSION)/include lib/include
+	# without specifying MCPU, it targets native
+	#	we want to specify -DZIG_TARGET_TRIPLE=$(DEB_HOST_MULTIARCH), but it breaks PIE
+	dh_auto_configure -- \
+		-DZIG_PIE=ON \
+		-DZIG_SHARED_LLVM=ON \
+		-DZIG_TARGET_MCPU=baseline
 
-override_dh_auto_build:
+# output of build is stage3/bin and stage3/lib
+BBASE := obj-$(DEB_HOST_GNU_TYPE)/stage3
+
+# make a man page and move the docs to usr/share/doc
+override_dh_auto_install:
+	help2man -s 1 -N -n "zig compiler and build tool" -v version $(BBASE)/bin/zig -o zig$(VERSION).1
+	mkdir -p debian/tmp/usr/share/doc/zig$(VERSION)
+	mv $(BBASE)/lib/zig/docs/* debian/tmp/usr/share/doc/zig$(VERSION)/
+	rmdir $(BBASE)/lib/zig/docs
+	dh_auto_install
+
+	# Drop the RPATH to /usr/lib/llvm-$(LLVM_VERSION)/lib; the libraries are
+	# also in the default search path, so dh_shlibdeps finds libllvm$(LLVM_VERSION).
+	chrpath -d debian/tmp/usr/bin/zig
+
+	# Create symlink /usr/bin/zig$(VERSION)
+	ln -s ../lib/zig$(VERSION)/bin/zig debian/tmp/usr/bin/zig$(VERSION)
 
 override_dh_auto_test:
 ifeq ($(filter nocheck,$(DEB_BUILD_OPTIONS)),)
-ifeq ($(DEB_BUILD_ARCH),$(DEB_HOST_ARCH))
-	test "$$(./zig version)" = "$(DEB_VERSION_UPSTREAM)"
-	rm -rf debian/smoke && mkdir -p debian/smoke
-	printf 'const std = @import("std");\npub fn main() void {\n    std.debug.print("ok\\n", .{});\n}\n' \
-	  > debian/smoke/hello.zig
-	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/debian/smoke/cache ZIG_LOCAL_CACHE_DIR=$(CURDIR)/debian/smoke/cache \
-	  ./zig build-exe debian/smoke/hello.zig -femit-bin=debian/smoke/hello
-	test "$$(debian/smoke/hello 2>&1)" = ok
-	rm -rf debian/smoke
-endif
+	$(BBASE)/bin/zig test test/behavior.zig
+	dh_auto_test
 endif
 
-override_dh_auto_install:
-	install -d $(PKGDIR)/$(ZIGDIR) $(PKGDIR)/usr/bin $(PKGDIR)/usr/share/doc/zig
-	install -m 0755 zig $(PKGDIR)/$(ZIGDIR)/zig
-	cp -R --no-preserve=ownership lib $(PKGDIR)/$(ZIGDIR)/lib
-	install -m 0644 doc/langref.html $(PKGDIR)/usr/share/doc/zig/langref.html
-	ln -s ../lib/zig/zig $(PKGDIR)/usr/bin/zig
-
-# The upstream binary is a stripped static executable whose integrity was
-# verified against upstream's signature; leave it byte-for-byte intact.
-override_dh_strip override_dh_dwz:
-
-# lib/ is the compiler's source-level standard library and libc sources;
-# none of it is a shared library.
-override_dh_makeshlibs:
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf debian/zig-cache .zig-cache zig$(VERSION).1
+	[ ! -L lib/include ] || rm -f lib/include

@@ -1,0 +1,143 @@
+#!/bin/bash
+# Update the packaging to the latest Zig release on ziglang.org.
+#
+# Usage: debian/update-upstream [VERSION]
+#
+#   VERSION  upstream version to move to (default: the newest release in
+#            https://ziglang.org/download/index.json)
+#
+# The script:
+#   1. renames the source and binary packages when the 0.x series changes
+#      (zig0.17 -> zig0.18, including debian/zig0.17*.* files);
+#   2. adds a "New upstream release" entry to debian/changelog;
+#   3. runs debian/fetch-orig-source to download, verify and repack the
+#      new orig tarball;
+#   4. reads the LLVM version the new release needs from its
+#      CMakeLists.txt and updates debian/control, debian/rules and
+#      debian/*.links to match.
+#
+# The changelog entry names the release and links to upstream's release
+# notes. It does not copy the release notes: debian/changelog records
+# changes to the Debian package, and Zig's release notes are a long HTML
+# document published at the linked URL.
+#
+# Review the result with "git diff", then build (see debian/README.md).
+# Set DEBFULLNAME and DEBEMAIL to choose the changelog author; otherwise
+# git's user.name and user.email are used.
+
+set -euo pipefail
+
+BASE_URL='https://ziglang.org/download'
+
+debian=$(cd "$(dirname "$0")" && pwd)
+cd "$debian"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+for tool in curl jq perl dpkg-parsechangelog; do
+  command -v "$tool" >/dev/null || die "'$tool' is required"
+done
+
+if git -C "$debian" rev-parse --is-inside-work-tree >/dev/null 2>&1 &&
+   [ -n "$(git -C "$debian" status --porcelain --untracked-files=no)" ]; then
+  die "debian/ has uncommitted changes; commit or stash them first"
+fi
+
+index=$(curl --proto '=https' --tlsv1.2 -fsSL --retry 3 "$BASE_URL/index.json")
+
+latest=${1:-$(jq -r 'keys[] | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' <<<"$index" | sort -V | tail -n1)}
+jq -e --arg v "$latest" '.[$v].src.tarball' <<<"$index" >/dev/null ||
+  die "no source release $latest in $BASE_URL/index.json"
+
+old_source=$(dpkg-parsechangelog -l changelog -S Source)
+old_debversion=$(dpkg-parsechangelog -l changelog -S Version)
+distribution=$(dpkg-parsechangelog -l changelog -S Distribution)
+old_version=$(sed 's/^[0-9]*://; s/-[^-]*$//; s/~us[0-9]*$//' <<<"$old_debversion")
+
+if ! dpkg --compare-versions "$latest" gt "$old_version"; then
+  echo "Already at zig $old_version (latest release: $latest)."
+  exit 0
+fi
+
+old_series=${old_source#zig}
+new_series=${latest%.*}
+new_source=zig$new_series
+new_debversion="$latest~us1-1"
+release_date=$(jq -r --arg v "$latest" '.[$v].date // empty' <<<"$index")
+notes=$(jq -r --arg v "$latest" '.[$v].notes // empty' <<<"$index")
+
+echo "Updating $old_source $old_debversion -> $new_source $new_debversion"
+
+# Files that name the series (zig0.17) or the LLVM version.
+series_files() {
+  printf '%s\n' control watch tests/control source/lintian-overrides
+  ls zig"$new_series".* zig"$new_series"-dev.* 2>/dev/null
+}
+
+# 1. Rename the packages for a new series.
+bullets=()
+if [ "$old_series" != "$new_series" ]; then
+  for f in zig"$old_series".* zig"$old_series"-dev.*; do
+    [ -e "$f" ] || continue
+    new=${f/#zig$old_series/zig$new_series}
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      git mv "$f" "$new"
+    else
+      mv "$f" "$new"
+    fi
+  done
+  # zig0.17 -> zig0.18 everywhere; "(0\.17\." -> "(0\.18\." in debian/watch.
+  series_files | OS="$old_series" NS="$new_series" \
+    OW="(${old_series//./\\.}\\." NW="(${new_series//./\\.}\\." \
+    xargs perl -pi -e '
+      s/\bzig\Q$ENV{OS}\E(?![0-9])/zig$ENV{NS}/g;
+      s/\Q$ENV{OW}\E/$ENV{NW}/g;
+    '
+  bullets+=("Rename source and binary packages to $new_source and $new_source-dev.")
+fi
+
+# 2. Changelog entry.
+name=${DEBFULLNAME:-$(git config user.name 2>/dev/null || true)}
+email=${DEBEMAIL:-$(git config user.email 2>/dev/null || true)}
+[ -n "$name" ] && [ -n "$email" ] ||
+  die "set DEBFULLNAME and DEBEMAIL (or git user.name and user.email)"
+
+{
+  echo "$new_source ($new_debversion) $distribution; urgency=medium"
+  echo
+  echo "  * New upstream release $latest${release_date:+ ($release_date)}."
+  [ -z "$notes" ] || echo "    Release notes: $notes"
+  for b in ${bullets[@]+"${bullets[@]}"}; do echo "  * $b"; done
+  echo
+  echo " -- $name <$email>  $(date -R)"
+  echo
+  cat changelog
+} > changelog.new
+mv changelog.new changelog
+
+# 3. Download, verify and repack the orig tarball.
+"$debian/fetch-orig-source"
+
+# 4. Follow upstream's LLVM version.
+orig="$(dirname "$(dirname "$debian")")/${new_source}_$latest~us1.orig.tar.xz"
+new_llvm=$(tar -xOJf "$orig" --wildcards --no-wildcards-match-slash '*/CMakeLists.txt' |
+  sed -n 's/^find_package(llvm \([0-9]*\))$/\1/p')
+old_llvm=$(sed -n 's/^LLVM_VERSION := \([0-9]*\)$/\1/p' rules)
+[ -n "$new_llvm" ] || die "could not find the LLVM version in CMakeLists.txt"
+[ -n "$old_llvm" ] || die "could not find LLVM_VERSION in debian/rules"
+
+if [ "$new_llvm" != "$old_llvm" ]; then
+  # llvm-22-dev, libclang-cpp22-dev, /llvm-22/lib/clang/22/, LLVM_VERSION := 22
+  { series_files; echo rules; } | O="$old_llvm" N="$new_llvm" xargs perl -pi -e '
+    s/\b(llvm-|libclang-|liblld-|libclang-common-|libclang-cpp)$ENV{O}(?=-dev\b)/${1}$ENV{N}/g;
+    s{/llvm-$ENV{O}/lib/clang/$ENV{O}/}{/llvm-$ENV{N}/lib/clang/$ENV{N}/}g;
+    s/^LLVM_VERSION := $ENV{O}$/LLVM_VERSION := $ENV{N}/;
+  '
+  N="$new_llvm" perl -0pi -e \
+    's/\A(.*\n\n  \* New upstream release .*\n(?:    .*\n)*)/$1  * Build against LLVM $ENV{N}.\n/' changelog
+fi
+
+echo
+echo "Updated to $new_source $new_debversion (LLVM $new_llvm)."
+echo "Next: review with 'git -C debian diff', remove any old unpacked source"
+echo "next to debian/, then build with 'debian/rules build' or 'debuild'."

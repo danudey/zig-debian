@@ -21,8 +21,8 @@ Standards-Version: 4.7.3
 Section: devel
 Rules-Requires-Root: no
 Homepage: https://ziglang.org/
-Vcs-Browser: https://github.com/dryzig/zig-debian
-Vcs-Git: https://github.com/dryzig/zig-debian.git
+Vcs-Browser: https://github.com/danudey/zig-debian
+Vcs-Git: https://github.com/danudey/zig-debian.git
 
 Package: zig0.17
 Architecture: amd64 arm64 s390x riscv64

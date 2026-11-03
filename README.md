@@ -48,7 +48,7 @@ $ sudo apt install build-essential devscripts equivs curl jq minisign
 
 ```bash
 $ mkdir zig && cd zig
-$ git clone https://github.com/dryzig/zig-debian.git debian
+$ git clone https://github.com/danudey/zig-debian.git debian
 $ sudo mk-build-deps -ir debian/control
 ```
 
@@ -112,10 +112,20 @@ changes belong in their release notes.
 Origin
 ------
 
-This repository is a fork of Arto Bendiken's
+This repository started as a copy of Arto Bendiken's
 [dryzig/zig-debian](https://github.com/dryzig/zig-debian), which
-repackaged upstream's prebuilt Zig 0.6.0 binaries (2020). The current
-source-based packaging follows Ubuntu's `zig0.16` package by nick black,
-Nick Hastings and Pushkar Kulkarni, available from
+repackaged upstream's prebuilt Zig 0.6.0 binaries (2020), and keeps its
+history. The current source-based packaging follows Ubuntu's `zig0.16`
+package by nick black, Nick Hastings and Pushkar Kulkarni, available from
 [Launchpad](https://launchpad.net/ubuntu/+source/zig0.16) and
 [Salsa](https://salsa.debian.org/nickblack/zig0.15).
+
+License
+-------
+
+The packaging is distributed under the Expat (MIT) license; see
+[LICENSE](LICENSE). It includes work from Ubuntu's `zig0.16` packaging,
+which is under the same license. The original 2020 packaging was released
+into the public domain under the Unlicense. Zig itself, and the libraries
+it bundles, are under their own licenses, listed in
+[`copyright`](copyright).

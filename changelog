@@ -18,6 +18,9 @@ zig0.17 (0.17.0~us1-1) unstable; urgency=medium
   * Add debian/update-upstream to move to the latest upstream release.
   * Provide /usr/bin/zig and zig(1) through update-alternatives, so the
     default can be chosen when several series are installed.
+  * License the packaging under Expat, as Ubuntu's is; replace UNLICENSE
+    with LICENSE and credit Ubuntu's authors in debian/copyright.
+  * Point Vcs-* at github.com/danudey/zig-debian.
 
  -- Daniel Fox <danudey@me.com>  Tue, 03 Nov 2026 09:26:32 -0700
 

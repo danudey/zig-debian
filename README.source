@@ -47,9 +47,9 @@ APIs to glibc-private versioned APIs. These vendored sources
 make cross-compiling of zig applications possible.
 
 See the below upstream link for details:
-https://github.com/ziglang/zig/tree/master/lib/libc/glibc
+https://codeberg.org/ziglang/zig/src/branch/master/lib/libc/glibc
 
 These sources are updated by the upstream maintainers. Below is an
 example of one such commit:
-https://github.com/ziglang/zig/commit/2314051
+https://codeberg.org/ziglang/zig/commit/2314051
 

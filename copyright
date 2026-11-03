@@ -34,12 +34,16 @@ License: Expat
 # author explicit with its own stanza.
 Files: debian/*
 Copyright: 2026 Daniel Fox <danudey@me.com>
+           2025-2026 Canonical Ltd.
            2025 nick black <dank@debian.org>
            2024 Nick Hastings <nicholaschastings@gmail.com>
 License: Expat
 Comment:
- Based on the zig0.16 packaging in Ubuntu. The earlier binary-repack
- packaging (2020, Arto Bendiken) was released under the Unlicense.
+ Derived from the Expat-licensed zig0.16 packaging in Ubuntu
+ (nick black, Nick Hastings; Ubuntu changes by Pushkar Kulkarni of
+ Canonical). The earlier binary-repack packaging (2020, Arto Bendiken)
+ was dedicated to the public domain under the Unlicense; what remains
+ of it is distributed here under the Expat license.
 
 Files: lib/*
 Copyright: 1996, ACN S.A

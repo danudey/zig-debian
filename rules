@@ -1,12 +1,56 @@
 #!/usr/bin/make -f
+# Repackages upstream's prebuilt, statically linked Zig release.
+# Use debian/fetch-orig-source to create the orig tarball.
+
 export LC_ALL=C.UTF-8
-export DH_VERBOSE=1
 
 include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/pkg-info.mk
 
-prefix      = /usr
-exec_prefix = $(prefix)
-libdir      = $(exec_prefix)/lib/$(DEB_HOST_MULTIARCH)
+PKGDIR  = debian/zig
+ZIGDIR  = usr/lib/zig
+
+# Expected ELF machine for each supported Debian architecture.
+ELF_MACHINE_amd64 = Advanced Micro Devices X86-64
+ELF_MACHINE_arm64 = AArch64
 
 %:
 	dh $@
+
+override_dh_auto_configure:
+	@test -n "$(ELF_MACHINE_$(DEB_HOST_ARCH))" || \
+	  { echo "unsupported architecture: $(DEB_HOST_ARCH)" >&2; exit 1; }
+	@readelf -h zig | grep -q "Machine: *$(ELF_MACHINE_$(DEB_HOST_ARCH))$$" || \
+	  { echo "the zig binary in the orig tarball is not for $(DEB_HOST_ARCH);" \
+	         "re-run debian/fetch-orig-source for this architecture" >&2; exit 1; }
+
+override_dh_auto_build:
+
+override_dh_auto_test:
+ifeq ($(filter nocheck,$(DEB_BUILD_OPTIONS)),)
+ifeq ($(DEB_BUILD_ARCH),$(DEB_HOST_ARCH))
+	test "$$(./zig version)" = "$(DEB_VERSION_UPSTREAM)"
+	rm -rf debian/smoke && mkdir -p debian/smoke
+	printf 'const std = @import("std");\npub fn main() void {\n    std.debug.print("ok\\n", .{});\n}\n' \
+	  > debian/smoke/hello.zig
+	ZIG_GLOBAL_CACHE_DIR=$(CURDIR)/debian/smoke/cache ZIG_LOCAL_CACHE_DIR=$(CURDIR)/debian/smoke/cache \
+	  ./zig build-exe debian/smoke/hello.zig -femit-bin=debian/smoke/hello
+	test "$$(debian/smoke/hello 2>&1)" = ok
+	rm -rf debian/smoke
+endif
+endif
+
+override_dh_auto_install:
+	install -d $(PKGDIR)/$(ZIGDIR) $(PKGDIR)/usr/bin $(PKGDIR)/usr/share/doc/zig
+	install -m 0755 zig $(PKGDIR)/$(ZIGDIR)/zig
+	cp -R --no-preserve=ownership lib $(PKGDIR)/$(ZIGDIR)/lib
+	install -m 0644 doc/langref.html $(PKGDIR)/usr/share/doc/zig/langref.html
+	ln -s ../lib/zig/zig $(PKGDIR)/usr/bin/zig
+
+# The upstream binary is a stripped static executable whose integrity was
+# verified against upstream's signature; leave it byte-for-byte intact.
+override_dh_strip override_dh_dwz:
+
+# lib/ is the compiler's source-level standard library and libc sources;
+# none of it is a shared library.
+override_dh_makeshlibs:

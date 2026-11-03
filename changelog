@@ -1,3 +1,28 @@
+zig (0.17.0-1) unstable; urgency=medium
+
+  * New upstream release, based on upstream's amd64 and arm64 binaries:
+
+    <https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz>
+    <https://ziglang.org/download/0.17.0/zig-aarch64-linux-0.17.0.tar.xz>
+
+  * Add debian/fetch-orig-source, which verifies the upstream SHA-256 and
+    minisign signature before repacking the orig tarball.
+  * Install to /usr/lib/zig without a version-specific path, so new upstream
+    releases only need a changelog entry.
+  * Refuse to build when the orig tarball's binary does not match the host
+    architecture; smoke-test the compiler during the build.
+  * Do not strip or dwz the upstream binary.
+  * Switch to debhelper compat 13; Standards-Version 4.7.3;
+    Rules-Requires-Root: no.
+  * Point Vcs-* at the packaging repository, and upstream links at Codeberg.
+  * Update the watch file to version 4 and upstream's index.json.
+  * Refresh lintian overrides for current lintian and upstream layout.
+  * Rewrite debian/copyright to cover the third-party code bundled in lib/
+    and statically linked into the compiler.
+  * New maintainer.
+
+ -- Daniel Fox <danudey@me.com>  Mon, 02 Nov 2026 15:06:16 -0700
+
 zig (0.6.0-1) unstable; urgency=low
 
   * Initial packaging based on upstream's amd64 binaries:

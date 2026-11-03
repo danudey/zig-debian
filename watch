@@ -1,1 +1,4 @@
-version=3
+version=4
+opts="searchmode=plain" \
+  https://ziglang.org/download/index.json \
+  https://ziglang.org/download/[\d.]+/zig-x86_64-linux-@ANY_VERSION@@ARCHIVE_EXT@

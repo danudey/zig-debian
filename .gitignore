@@ -10,3 +10,8 @@ debhelper-build-stamp
 files
 zig.substvars
 zig/
+*.debhelper.log
+*.debhelper
+debhelper-build-stamp
+smoke/
+tmp/

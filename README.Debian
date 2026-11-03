@@ -1,9 +1,14 @@
 Zig for Debian
 ==============
 
-See <https://ziglang.org/documentation/0.6.0/> for documentation.
+See <https://ziglang.org/documentation/> for documentation. The language
+reference for the packaged version is installed as
+/usr/share/doc/zig/langref.html.
 
-Use <https://github.com/ziglang/zig/issues> for bug reports regarding Zig.
+The compiler is installed to /usr/lib/zig/zig, with its standard library in
+/usr/lib/zig/lib; /usr/bin/zig is a symlink to it.
+
+Use <https://codeberg.org/ziglang/zig/issues> for bug reports regarding Zig.
 
 Use <https://github.com/dryzig/zig-debian/issues> for bug reports and
 feature requests regarding the packaging of Zig for Debian.

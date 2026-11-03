@@ -1,14 +1,12 @@
-# explicit is better than implicit
-zig source: binary-control-field-duplicates-source *
+# This package repacks upstream's prebuilt binary release.
+zig source: source-is-missing [zig]
+zig source: source-is-missing [doc/langref.html]
+zig source: source-is-missing [lib/build-web/index.html]
+zig source: source-is-missing [lib/docs/index.html]
 
-# yes, it's true
-zig source: source-is-missing zig
+# Vendored FreeBSD header quoting an RFC; shipped verbatim by upstream.
+zig source: license-problem-non-free-RFC [lib/libc/include/generic-freebsd/netlink/netlink.h]
 
-# we endeavor to track the latest policy
-zig source: newer-standards-version *
-
-# yes, it's true
-zig source: testsuite-autopkgtest-missing
-
-# needed for 0.6.0, but not master
-zig source: source-is-missing doc/std/data.js *
+# Upstream signs releases with minisign, which uscan cannot check;
+# debian/fetch-orig-source verifies the signature instead.
+zig source: debian-watch-does-not-check-openpgp-signature [debian/watch]

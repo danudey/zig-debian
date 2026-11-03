@@ -1,130 +1,92 @@
 Zig for Debian and Ubuntu
 =========================
 
-This repository contains instructions for installing the [Zig][] programming
-language and toolchain on the Ubuntu and Debian operating systems, as well
-as the [`debuild`][] configuration for building the corresponding binary
-packages from the [upstream tarballs](https://ziglang.org/download/).
+This repository contains the [`debuild`][] configuration for building
+[Zig][] binary packages for Debian and Ubuntu from upstream's signed
+[binary release tarballs](https://ziglang.org/download/).
 
 [Zig]:     https://ziglang.org
 [`debuild`]: https://manpages.debian.org/testing/devscripts/debuild.1.en.html
 
-Distributions
--------------
+Supported systems
+-----------------
 
-Currently, x86-64 (aka AMD64) binary packages are available for all recent
-Ubuntu and Debian releases:
+The package repacks upstream's statically linked compiler, so one `.deb`
+works on any reasonably current Debian-based system. Zig 0.17.0 packages
+have been tested on:
 
 | Distribution     | Alias    | AMD64 |
 | :--------------- | :------- | :---- |
-| Ubuntu 20.10     | Groovy   | ✔     |
-| Ubuntu 20.04 LTS | Focal    | ✔     |
-| Ubuntu 19.10     | Eoan     | ✔     |
-| Ubuntu 18.04 LTS | Bionic   | ✔     |
-| Debian 11        | Bullseye | ✔     |
-| Debian 10        | Buster   | ✔     |
-| Debian unstable  | Sid      | ✔     |
+| Ubuntu 26.04 LTS | Resolute | ✔     |
+| Ubuntu 24.04 LTS | Noble    | ✔     |
+| Ubuntu 22.04 LTS | Jammy    | ✔     |
+| Debian 13        | Trixie   | ✔     |
+| Debian 12        | Bookworm | ✔     |
+
+ARM64 (`arm64`) packages can be built the same way. They have been built
+and tested on Debian 13 (Trixie) under emulation.
 
 Installation
 ------------
 
-### Installation from an APT repository
-
-Once you've completed the [repository configuration](#configuration) (see
-further below), installation is as easy as the familiar:
+Build the package (see [Building](#building)), then install it with `apt`
+so that dependencies are handled:
 
 ```bash
-$ sudo apt install zig
+$ sudo apt install ./zig_0.17.0-1_amd64.deb
 ```
 
-### Installation from a downloaded .DEB package file
+The compiler is installed to `/usr/lib/zig`, with `/usr/bin/zig` linked to
+it.
 
-Alternatively, you can just download the latest [`.deb`][] file and install
-that directly with [`dpkg`][]:
+Building
+--------
+
+### 1. Install the build tools
 
 ```bash
-$ wget https://github.com/dryzig/zig-debian/releases/download/0.6.0-1/zig_0.6.0-1_amd64.deb
-
-$ sudo dpkg -i zig_0.6.0-1_amd64.deb
+$ sudo apt install build-essential debhelper devscripts curl jq minisign
 ```
 
-[`.deb`]: https://en.wikipedia.org/wiki/Deb_(file_format)
-[`dpkg`]: https://manpages.debian.org/testing/dpkg/dpkg.1.en.html
-
-Configuration
--------------
-
-### Configure PGP Signing Keys
+### 2. Fetch and verify the upstream release
 
 ```bash
-$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 379CE192D401AB61
+$ mkdir zig-build && cd zig-build
+$ git clone https://github.com/dryzig/zig-debian.git debian
+$ debian/fetch-orig-source
 ```
 
-Configuration on Ubuntu
------------------------
+`fetch-orig-source` downloads the release for the version in
+`debian/changelog` and the build machine's architecture. It refuses to
+continue unless both checks pass:
 
-### Configure on Ubuntu 20.10 (Groovy)
+- the SHA-256 listed in upstream's `index.json`
+- the minisign signature from the Zig release key
+  (`RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U`)
+
+It then writes `zig_<version>.orig.tar.xz`. To build for a different
+version or architecture, pass them explicitly, for example
+`debian/fetch-orig-source 0.17.0 arm64`.
+
+### 3. Build
 
 ```bash
-$ echo 'deb https://dl.bintray.com/dryzig/zig-ubuntu groovy main' | sudo tee -a /etc/apt/sources.list
-$ sudo apt update
+$ tar xf zig_0.17.0.orig.tar.xz
+$ mv debian zig-0.17.0/
+$ cd zig-0.17.0
+$ debuild -us -uc
 ```
 
-### Configure on Ubuntu 20.04 LTS (Focal)
-
-```bash
-$ echo 'deb https://dl.bintray.com/dryzig/zig-ubuntu focal main' | sudo tee -a /etc/apt/sources.list
-$ sudo apt update
-```
-
-### Configure on Ubuntu 19.10 (Eoan)
-
-```bash
-$ echo 'deb https://dl.bintray.com/dryzig/zig-ubuntu eoan main' | sudo tee -a /etc/apt/sources.list
-$ sudo apt update
-```
-
-### Configure on Ubuntu 18.04 LTS (Bionic)
-
-```bash
-$ echo 'deb https://dl.bintray.com/dryzig/zig-ubuntu bionic main' | sudo tee -a /etc/apt/sources.list
-$ sudo apt update
-```
-
-Configuration on Debian
------------------------
-
-### Configure on Debian 11 (Bullseye)
-
-```bash
-$ echo 'deb https://dl.bintray.com/dryzig/zig-debian bullseye main' | sudo tee -a /etc/apt/sources.list
-$ sudo apt update
-```
-
-### Configure on Debian 10 (Buster)
-
-```bash
-$ echo 'deb https://dl.bintray.com/dryzig/zig-debian buster main' | sudo tee -a /etc/apt/sources.list
-$ sudo apt update
-```
+The build checks that the binary matches the target architecture, and
+compiles and runs a small program with the packaged compiler.
 
 Maintenance
 -----------
 
-### Building `zig_0.6.0-1_amd64.deb`
+### Updating to a new upstream release
 
-```bash
-$ wget https://ziglang.org/download/0.6.0/zig-linux-x86_64-0.6.0.tar.xz
-$ tar xvf zig-linux-x86_64-0.6.0.tar.xz
-```
-
-```bash
-$ ln -s zig-linux-x86_64-0.6.0 zig-0.6.0
-$ tar cJhf zig_0.6.0.orig.tar.xz zig-0.6.0
-```
-
-```bash
-$ cd zig-0.6.0
-$ git clone https://github.com/dryzig/zig-debian.git debian
-$ debuild
-```
+1. Check for a new release: `uscan --report` (from the source tree).
+2. Add a changelog entry: `dch -v <version>-1 "New upstream release."`
+3. Follow [Building](#building) from step 2.
+4. Run `lintian -I ../zig_<version>-1_amd64.changes` and update the
+   overrides if upstream's file layout changed.

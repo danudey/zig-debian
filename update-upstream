@@ -52,7 +52,7 @@ jq -e --arg v "$latest" '.[$v].src.tarball' <<<"$index" >/dev/null ||
 old_source=$(dpkg-parsechangelog -l changelog -S Source)
 old_debversion=$(dpkg-parsechangelog -l changelog -S Version)
 distribution=$(dpkg-parsechangelog -l changelog -S Distribution)
-old_version=$(sed 's/^[0-9]*://; s/-[^-]*$//; s/~us[0-9]*$//' <<<"$old_debversion")
+old_version=$(sed 's/^[0-9]*://; s/-[^-]*$//; s/[~+]\(us\|ds\)[0-9]*$//' <<<"$old_debversion")
 
 if ! dpkg --compare-versions "$latest" gt "$old_version"; then
   echo "Already at zig $old_version (latest release: $latest)."
@@ -62,7 +62,7 @@ fi
 old_series=${old_source#zig}
 new_series=${latest%.*}
 new_source=zig$new_series
-new_debversion="$latest~us1-1"
+new_debversion="$latest+ds1-1~ppa1"
 release_date=$(jq -r --arg v "$latest" '.[$v].date // empty' <<<"$index")
 notes=$(jq -r --arg v "$latest" '.[$v].notes // empty' <<<"$index")
 
@@ -119,7 +119,7 @@ mv changelog.new changelog
 "$debian/fetch-orig-source"
 
 # 4. Follow upstream's LLVM version.
-orig="$(dirname "$(dirname "$debian")")/${new_source}_$latest~us1.orig.tar.xz"
+orig="$(dirname "$(dirname "$debian")")/${new_source}_$latest+ds1.orig.tar.xz"
 new_llvm=$(tar -xOJf "$orig" --wildcards --no-wildcards-match-slash '*/CMakeLists.txt' |
   sed -n 's/^find_package(llvm \([0-9]*\))$/\1/p')
 old_llvm=$(sed -n 's/^LLVM_VERSION := \([0-9]*\)$/\1/p' rules)

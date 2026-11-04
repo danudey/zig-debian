@@ -8,15 +8,15 @@
 #             (the parent of debian/), ready to build
 #
 # The orig tarball is written next to the package directory, as
-# ../SOURCE_VERSION.orig.tar.xz (e.g. ../zig0.17_0.17.0~us1.orig.tar.xz),
+# ../SOURCE_VERSION.orig.tar.xz (e.g. ../zig0.17_0.17.0+ds1.orig.tar.xz),
 # which is where dpkg-source and dpkg-buildpackage look for it. An existing
 # orig tarball is reused.
 #
 # The download is checked against both the SHA-256 published in upstream's
 # index.json and the minisign signature made with the Zig release key in
 # debian/upstream/signing-key. Files listed in Files-Excluded in
-# debian/copyright are removed by mk-origtargz, which appends the ~usN
-# repack suffix.
+# debian/copyright are removed by mk-origtargz, which appends the +dsN
+# repack suffix ("Debian source": upstream's tarball with files removed).
 #
 # Set ZIG_SKIP_MINISIGN=1 to rely on the SHA-256 check alone (not
 # recommended: the hash and the tarball come from the same server).
@@ -40,9 +40,9 @@ outdir=$(dirname "$pkgdir")
 
 source=$(dpkg-parsechangelog -l "$debian/changelog" -S Source)
 debversion=$(dpkg-parsechangelog -l "$debian/changelog" -S Version)
-# 1:0.17.0~us1-1 -> 0.17.0~us1 -> 0.17.0 and ~us1
+# 1:0.17.0+ds1-1~ppa1 -> 0.17.0+ds1 -> 0.17.0 and +ds1
 origversion=$(echo "$debversion" | sed 's/^[0-9]*://; s/-[^-]*$//')
-version=$(echo "$origversion" | sed 's/~us[0-9]*$//')
+version=$(echo "$origversion" | sed 's/+ds[0-9]*$//')
 suffix=${origversion#"$version"}
 
 case "$version" in
@@ -104,14 +104,14 @@ else
     echo "warning: skipping minisign verification" >&2
   fi
 
-  # Remove Files-Excluded and write ../SOURCE_VERSION~usN.orig.tar.xz.
+  # Remove Files-Excluded and write ../SOURCE_VERSION+dsN.orig.tar.xz.
   mk-origtargz --package "$source" --version "$version" \
     --repack-suffix "$suffix" --compression xz \
     --copyright-file "$debian/copyright" \
     --directory "$work" --copy "$work/$name"
   [ -e "$work/${source}_$origversion.orig.tar.xz" ] || {
     echo "error: mk-origtargz did not produce ${source}_$origversion.orig.tar.xz;" >&2
-    echo "       check Files-Excluded in debian/copyright and the ~usN suffix" >&2
+    echo "       check Files-Excluded in debian/copyright and the +dsN suffix" >&2
     echo "       in debian/changelog" >&2
     exit 1; }
   mv "$work/${source}_$origversion.orig.tar.xz" "$orig"

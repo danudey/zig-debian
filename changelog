@@ -1,3 +1,13 @@
+zig0.17 (0.17.1+ds1-1~ppa1) resolute; urgency=medium
+
+  * New upstream release 0.17.1 (2026-11-02).
+    Release notes: https://ziglang.org/download/0.17.0/release-notes.html
+  * Mark the repacked orig tarball with +dsN instead of ~usN, so its name
+    cannot clash with Ubuntu's zig0.17 tarball, and mark PPA builds with
+    a ~ppaN revision.
+
+ -- Daniel Fox <danudey@me.com>  Wed, 04 Nov 2026 09:54:35 -0700
+
 zig0.17 (0.17.0~us1-1) unstable; urgency=medium
 
   * Build from upstream source instead of repacking upstream's binaries,

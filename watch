@@ -8,7 +8,7 @@ version=4
 # downloads the same tarball and verifies its signature; prefer it.
 # Use debian/update-upstream to move to a new 0.x series.
 
-opts="dversionmangle=s/~us\d*$//, \
-      repacksuffix=~us1, \
+opts="dversionmangle=s/\+ds\d*$//, \
+      repacksuffix=+ds1, \
       compression=xz" \
       https://ziglang.org/download/ .*/zig-(0\.17\.[0-9.]*)\.tar\.xz

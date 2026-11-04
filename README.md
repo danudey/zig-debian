@@ -69,7 +69,7 @@ upstream source, so it runs `debian/fetch-orig-source --unpack`, which:
 2. checks its SHA-256 against upstream's `index.json`, and its minisign
    signature against the Zig release key in `debian/upstream/signing-key`;
 3. removes the files listed in `Files-Excluded` in `debian/copyright`
-   (with `mk-origtargz`) and writes `../zig0.17_0.17.0~us1.orig.tar.xz`;
+   (with `mk-origtargz`) and writes `../zig0.17_0.17.0+ds1.orig.tar.xz`;
 4. unpacks that tarball next to `debian/`.
 
 An existing orig tarball in the parent directory is reused. To only

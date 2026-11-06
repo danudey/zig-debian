@@ -117,8 +117,9 @@ This repository started as a copy of Arto Bendiken's
 repackaged upstream's prebuilt Zig 0.6.0 binaries (2020), and keeps its
 history. The current source-based packaging follows Ubuntu's `zig0.16`
 package by nick black, Nick Hastings and Pushkar Kulkarni, available from
-[Launchpad](https://launchpad.net/ubuntu/+source/zig0.16) and
-[Salsa](https://salsa.debian.org/nickblack/zig0.15).
+[Launchpad](https://launchpad.net/ubuntu/+source/zig0.16). Debian's Zig
+packaging team keeps its earlier `zig0.13` and `zig0.14` packaging on
+[Salsa](https://salsa.debian.org/zig-team).
 
 License
 -------
